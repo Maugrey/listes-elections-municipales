@@ -73,6 +73,12 @@ def drop_and_create(conn: psycopg2.extensions.connection) -> None:
         print("Activation des extensions PostgreSQL...", end=" ")
         cur.execute("CREATE EXTENSION IF NOT EXISTS unaccent")
         cur.execute("CREATE EXTENSION IF NOT EXISTS pg_trgm")
+        cur.execute("""
+            CREATE OR REPLACE FUNCTION unaccent_immutable(text)
+            RETURNS text LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE AS $$
+              SELECT unaccent('unaccent', $1)
+            $$
+        """)
         print("OK")
 
         print("Création des tables...", end=" ")
@@ -123,17 +129,17 @@ def create_indexes(conn: psycopg2.extensions.connection) -> None:
     with conn.cursor() as cur:
         cur.execute("""
             CREATE INDEX idx_circo_search ON circonscriptions
-            USING gin (to_tsvector('simple', unaccent(circonscription || ' ' || departement)))
+            USING gin (to_tsvector('simple', unaccent_immutable(circonscription || ' ' || departement)))
         """)
         cur.execute("""
             CREATE INDEX idx_listes_search ON listes
-            USING gin (to_tsvector('simple', unaccent(
+            USING gin (to_tsvector('simple', unaccent_immutable(
                 libelle_liste || ' ' || COALESCE(libelle_abrege, '') || ' ' || COALESCE(nuance, '')
             )))
         """)
         cur.execute("""
             CREATE INDEX idx_candidats_search ON candidats
-            USING gin (to_tsvector('simple', unaccent(nom || ' ' || prenom)))
+            USING gin (to_tsvector('simple', unaccent_immutable(nom || ' ' || prenom)))
         """)
         cur.execute("""
             CREATE INDEX idx_candidats_tete ON candidats (code_circonscription, numero_panneau)
@@ -192,14 +198,16 @@ def import_listes(conn: psycopg2.extensions.connection, df: pd.DataFrame) -> int
             "Libellé de la liste", "Code nuance de liste", "Nuance de liste"]]
         .drop_duplicates(subset=["Code circonscription", "Numéro de panneau"])
     )
+    # Filtrer les lignes sans numero_panneau valide
+    liste_df = liste_df[pd.notna(liste_df["Num\u00e9ro de panneau"]) & (liste_df["Num\u00e9ro de panneau"] != "")]
     rows = [
         (
             row["Code circonscription"],
-            int(row["Numéro de panneau"]) if row["Numéro de panneau"] else None,
-            row.get("Libellé abrégé de liste"),
-            row["Libellé de la liste"],
-            row.get("Code nuance de liste"),
-            row.get("Nuance de liste"),
+            int(float(row["Num\u00e9ro de panneau"])),
+            row.get("Libell\u00e9 abr\u00e9g\u00e9 de liste") or None,
+            row["Libell\u00e9 de la liste"],
+            row.get("Code nuance de liste") or None,
+            row.get("Nuance de liste") or None,
         )
         for _, row in liste_df.iterrows()
     ]
@@ -220,13 +228,18 @@ def import_listes(conn: psycopg2.extensions.connection, df: pd.DataFrame) -> int
 def import_candidats(conn: psycopg2.extensions.connection, df: pd.DataFrame) -> int:
     """Import de tous les candidats."""
     print("Import des candidats...", end=" ")
+    # Filtrer les lignes sans cles primaires valides
+    valid_df = df[
+        pd.notna(df["Num\u00e9ro de panneau"]) & (df["Num\u00e9ro de panneau"] != "") &
+        pd.notna(df["Ordre"]) & (df["Ordre"] != "")
+    ]
     rows = []
-    for _, row in df.iterrows():
-        tete = row.get("Tête de liste") == "OUI"
+    for _, row in valid_df.iterrows():
+        tete = row.get("T\u00eate de liste") == "OUI"
         rows.append((
             row["Code circonscription"],
-            int(row["Numéro de panneau"]) if row["Numéro de panneau"] else None,
-            int(row["Ordre"]) if row["Ordre"] else None,
+            int(float(row["Num\u00e9ro de panneau"])),
+            int(float(row["Ordre"])),
             row["Sexe"],
             row["Nom sur le bulletin de vote"],
             row["Prénom sur le bulletin de vote"],

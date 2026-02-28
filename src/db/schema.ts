@@ -21,7 +21,7 @@ export const circonscriptions = pgTable(
   (table) => ({
     searchIdx: index("idx_circo_search").using(
       "gin",
-      sql`to_tsvector('simple', unaccent(${table.circonscription} || ' ' || ${table.departement}))`
+      sql`to_tsvector('simple', unaccent_immutable(${table.circonscription} || ' ' || ${table.departement}))`
     ),
   })
 );
@@ -44,7 +44,7 @@ export const listes = pgTable(
     }),
     searchIdx: index("idx_listes_search").using(
       "gin",
-      sql`to_tsvector('simple', unaccent(${table.libelle_liste} || ' ' || coalesce(${table.libelle_abrege}, '') || ' ' || coalesce(${table.nuance}, '')))`
+      sql`to_tsvector('simple', unaccent_immutable(${table.libelle_liste} || ' ' || coalesce(${table.libelle_abrege}, '') || ' ' || coalesce(${table.nuance}, '')))`
     ),
   })
 );
@@ -73,7 +73,7 @@ export const candidats = pgTable(
     }),
     searchIdx: index("idx_candidats_search").using(
       "gin",
-      sql`to_tsvector('simple', unaccent(${table.nom} || ' ' || ${table.prenom}))`
+      sql`to_tsvector('simple', unaccent_immutable(${table.nom} || ' ' || ${table.prenom}))`
     ),
     teteIdx: index("idx_candidats_tete").on(
       table.code_circonscription,

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("@neondatabase/serverless", () => ({ neon: vi.fn(() => vi.fn()) }));
-vi.mock("drizzle-orm/neon-http", () => ({ drizzle: vi.fn(() => mockDb) }));
+vi.mock("pg", () => ({ Pool: class MockPool { constructor() {} } }));
+vi.mock("drizzle-orm/node-postgres", () => ({ drizzle: vi.fn(() => mockDb) }));
 
 const mockDb = { execute: vi.fn() };
 vi.mock("@/db/index", () => ({ db: mockDb }));

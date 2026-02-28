@@ -5,12 +5,12 @@
 
 import { describe, it, expect, vi } from "vitest";
 
-// Mock du driver Neon pour éviter une vraie connexion réseau
-vi.mock("@neondatabase/serverless", () => ({
-  neon: vi.fn(() => vi.fn()),
+// Mock du driver pg pour éviter une vraie connexion réseau
+vi.mock("pg", () => ({
+  Pool: class MockPool { constructor() {} },
 }));
 
-vi.mock("drizzle-orm/neon-http", () => ({
+vi.mock("drizzle-orm/node-postgres", () => ({
   drizzle: vi.fn(() => ({ _: "mock-db" })),
 }));
 
