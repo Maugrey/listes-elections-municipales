@@ -1,50 +1,75 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report
+Version change: N/A → 1.0.0 (initial ratification)
+Added sections: Core Principles (I–V), Technology Constraints, Development Workflow, Governance
+Templates updated: ✅ spec-template.md (compatible), ✅ plan-template.md (compatible), ✅ tasks-template.md (compatible)
+Deferred TODOs: none
+-->
+
+# Listes Élections Municipales 2026 Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Data Integrity
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+Les données affichées DOIVENT refléter exactement le CSV source au moment du dernier import.
+Le script d'import DOIT effectuer un drop-and-reload complet (aucune synchronisation
+partielle). Les transformations de données DOIVENT être documentées dans le script.
+L'application est strictement en lecture seule — aucune donnée utilisateur n'est persistée.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. User Experience First
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+L'interface DOIT suivre un design flat moderne inspiré des sites institutionnels français
+(esthétique gouv.fr) : typographie claire, hiérarchie forte, palette officielle Marianne.
+Le dark mode et le light mode DOIVENT tous deux être pleinement fonctionnels et commutables.
+La navigation DOIT rester sur une seule page ; les vues détail s'ouvrent en modales
+superposées aux résultats de recherche. Tous les éléments interactifs DOIVENT être
+accessibles au clavier.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. Test Coverage (NON-NEGOTIABLE)
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+Toute fonction de logique métier DOIT avoir des tests unitaires. Les composants React DOIVENT
+avoir au minimum des tests de rendu et d'interaction. Les tests DOIVENT passer avant qu'une
+fonctionnalité soit considérée terminée. Aucun code ne part en production sans son fichier de
+test correspondant.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. Deployment Simplicity
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+L'application DOIT être déployable et fonctionnelle sur le free tier Vercel sans modification
+ni add-on payant. Le pipeline d'import est LOCAL UNIQUEMENT et NE DOIT PAS être déployé ou
+déclenché à distance. Toute configuration d'environnement DOIT utiliser `.env.local` en local
+et les variables Vercel en production.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. Separation of Concerns
+
+Le système d'import (script Python, exécution locale) et l'application web (Next.js, Vercel)
+sont entièrement découplés. Le script d'import produit un état stable de base de données ;
+l'application web le consomme en lecture seule. Ces deux systèmes ne partagent que la chaîne
+de connexion à la base de données — aucun couplage à l'exécution.
+
+## Technology Constraints
+
+- **Framework** : Next.js 14+ (App Router), TypeScript 5+
+- **Database** : PostgreSQL via Neon (Vercel Postgres free tier)
+- **ORM** : Drizzle ORM
+- **Import** : Python 3.11+ avec pandas + psycopg2 (local only, non déployé)
+- **Styling** : Tailwind CSS + shadcn/ui + next-themes
+- **Tests** : Vitest + React Testing Library
+- **Déploiement** : Vercel free tier
+
+## Development Workflow
+
+1. L'import se lance localement via `python scripts/import_data.py`
+2. L'application lit les données via Drizzle ORM dans des Next.js Route Handlers
+3. Toute nouvelle fonctionnalité DOIT inclure des tests avant d'être considérée complète
+4. Les branches de feature suivent la convention `[NNN]-[short-name]`
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+Cette constitution régit toutes les décisions de développement. Elle prime sur toute autre
+pratique. Les amendements doivent être documentés avec justification et la version incrémentée
+selon le versionnage sémantique (MAJOR: rupture/suppression de principe, MINOR: ajout de
+principe, PATCH: clarification/reformulation). Utiliser `.github/copilot-instructions.md`
+comme référence de développement au quotidien.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-02-28 | **Last Amended**: 2026-02-28
