@@ -91,3 +91,36 @@ describe("search — structure de la réponse", () => {
     expect(Array.isArray(result.results)).toBe(true);
   });
 });
+
+describe("search — recherche multi-mots", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("accepte une requête de plusieurs mots (longueur totale >= 3)", async () => {
+    mockDb.execute = vi.fn().mockResolvedValueOnce({ rows: [] });
+
+    const { search } = await import("@/lib/search");
+    await expect(search({ q: "paris dupont" })).resolves.toBeDefined();
+  });
+
+  it("rejette si la chaine entiere fait moins de 3 caractères", async () => {
+    const { search } = await import("@/lib/search");
+    await expect(search({ q: "ab" })).rejects.toThrow(/3 caract/i);
+  });
+
+  it("construit une requête SQL avec autant de conditions que de mots", async () => {
+    const executeSpy = vi.fn().mockResolvedValueOnce({ rows: [] });
+    mockDb.execute = executeSpy;
+
+    const { search } = await import("@/lib/search");
+    await search({ q: "mot1 mot2 mot3" });
+
+    // La requête SQL générée doit contenir les 3 patterns
+    const sqlArg = executeSpy.mock.calls[0][0];
+    const sqlString = JSON.stringify(sqlArg);
+    expect(sqlString).toContain("%mot1%");
+    expect(sqlString).toContain("%mot2%");
+    expect(sqlString).toContain("%mot3%");
+  });
+});

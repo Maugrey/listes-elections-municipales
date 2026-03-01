@@ -1,6 +1,5 @@
 import { db } from "@/db/index";
-import { circonscriptions, listes, candidats } from "@/db/schema";
-import { sql, ilike, or, eq, and } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { SearchResponse, SearchResultItem } from "@/types";
 
 export type SearchParams = {
@@ -11,6 +10,8 @@ export type SearchParams = {
 
 /**
  * Recherche plein-texte avec unaccent sur tous les champs pertinents.
+ * Si la requête contient plusieurs mots, chaque mot est recherché indépendamment
+ * (logique AND inter-mots, OR intra-mot sur les champs).
  * Retourne des résultats au niveau liste avec tête de liste et candidat correspondant.
  */
 export async function search(params: SearchParams): Promise<SearchResponse> {
@@ -23,6 +24,38 @@ export async function search(params: SearchParams): Promise<SearchResponse> {
   const term = q.trim();
   const offset = (page - 1) * limit;
 
+  // Découpage en mots individuels : chaque mot doit être trouvé quelque part
+  const words = term.split(/\s+/).filter(Boolean);
+
+  // Pour chaque mot : condition OR sur tous les champs
+  const perWordConditions = words.map((word) => {
+    const pattern = `%${word}%`;
+    return sql`(
+      unaccent(ci.circonscription) ILIKE unaccent(${pattern})
+      OR unaccent(ci.departement) ILIKE unaccent(${pattern})
+      OR unaccent(l.libelle_liste) ILIKE unaccent(${pattern})
+      OR unaccent(COALESCE(l.libelle_abrege, '')) ILIKE unaccent(${pattern})
+      OR unaccent(COALESCE(l.nuance, '')) ILIKE unaccent(${pattern})
+      OR EXISTS (
+        SELECT 1 FROM candidats c_w
+        WHERE c_w.code_circonscription = l.code_circonscription
+          AND c_w.numero_panneau = l.numero_panneau
+          AND unaccent(c_w.nom || ' ' || c_w.prenom) ILIKE unaccent(${pattern})
+      )
+    )`;
+  });
+
+  // Condition matched_candidate : le candidat dont le nom contient au moins un des mots
+  const anyWordCandidateConditions = words.map((word) => {
+    const pattern = `%${word}%`;
+    return sql`unaccent(c_m.nom || ' ' || c_m.prenom) ILIKE unaccent(${pattern})`;
+  });
+
+  // AND sur tous les mots (tous doivent être trouvés)
+  const whereClause = sql.join(perWordConditions, sql` AND `);
+  // OR sur les mots pour la sous-requête candidat correspondant
+  const anyWordCandidateClause = sql.join(anyWordCandidateConditions, sql` OR `);
+
   // Requête principale : récupère les listes + circo + tête de liste + candidat correspondant
   // On utilise du SQL brut pour bénéficier de unaccent()
   const rows = await db.execute(sql`
@@ -30,36 +63,11 @@ export async function search(params: SearchParams): Promise<SearchResponse> {
       SELECT DISTINCT
         l.code_circonscription,
         l.numero_panneau,
-        -- Si la correspondance est sur un candidat (pas sur la liste/circo)
-        CASE
-          WHEN (
-            unaccent(c_match.nom || ' ' || c_match.prenom) ILIKE unaccent(${'%' + term + '%'})
-            AND NOT c_match.tete_de_liste
-          ) THEN jsonb_build_object(
-            'nom', c_match.nom,
-            'prenom', c_match.prenom,
-            'ordre', c_match.ordre
-          )
-          ELSE NULL
-        END AS matched_candidate,
-        -- Priorité de tri
         ci.code_departement,
         ci.circonscription
       FROM listes l
       JOIN circonscriptions ci ON ci.code_circonscription = l.code_circonscription
-      LEFT JOIN candidats c_match ON
-        c_match.code_circonscription = l.code_circonscription
-        AND c_match.numero_panneau = l.numero_panneau
-        AND (
-          unaccent(c_match.nom || ' ' || c_match.prenom) ILIKE unaccent(${'%' + term + '%'})
-        )
-      WHERE
-        unaccent(ci.circonscription) ILIKE unaccent(${'%' + term + '%'})
-        OR unaccent(ci.departement) ILIKE unaccent(${'%' + term + '%'})
-        OR unaccent(l.libelle_liste) ILIKE unaccent(${'%' + term + '%'})
-        OR unaccent(COALESCE(l.libelle_abrege, '')) ILIKE unaccent(${'%' + term + '%'})
-        OR unaccent(COALESCE(l.nuance, '')) ILIKE unaccent(${'%' + term + '%'})
-        OR unaccent(c_match.nom || ' ' || c_match.prenom) ILIKE unaccent(${'%' + term + '%'})
+      WHERE ${whereClause}
     ),
     counted AS (
       SELECT COUNT(DISTINCT (code_circonscription, numero_panneau))::int AS total
@@ -68,7 +76,17 @@ export async function search(params: SearchParams): Promise<SearchResponse> {
     SELECT
       ml.code_circonscription,
       ml.numero_panneau,
-      ml.matched_candidate,
+      -- Candidat correspondant : premier non-tête-de-liste dont le nom contient au moins un mot
+      (
+        SELECT jsonb_build_object('nom', c_m.nom, 'prenom', c_m.prenom, 'ordre', c_m.ordre)
+        FROM candidats c_m
+        WHERE c_m.code_circonscription = ml.code_circonscription
+          AND c_m.numero_panneau = ml.numero_panneau
+          AND NOT c_m.tete_de_liste
+          AND (${anyWordCandidateClause})
+        ORDER BY c_m.ordre
+        LIMIT 1
+      ) AS matched_candidate,
       l.libelle_abrege,
       l.libelle_liste,
       l.code_nuance,
