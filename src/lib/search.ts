@@ -94,7 +94,7 @@ export async function search(params: SearchParams): Promise<SearchResponse> {
     LIMIT ${limit} OFFSET ${offset}
   `);
 
-  const rowsArray = rows as Record<string, unknown>[];
+  const rowsArray = rows.rows as Record<string, unknown>[];
   const total = rowsArray.length > 0 ? Number(rowsArray[0].total ?? 0) : 0;
 
   const results: SearchResultItem[] = rowsArray.map((row) => ({

@@ -35,7 +35,7 @@ describe("getCityDetail — validation", () => {
 
 describe("getCityDetail — structure de la réponse", () => {
   beforeEach(() => {
-    mockDb.execute = vi.fn().mockResolvedValueOnce(mockListes);
+    mockDb.execute = vi.fn().mockResolvedValueOnce({ rows: mockListes });
   });
 
   it("retourne circo et listes", async () => {
@@ -59,7 +59,7 @@ describe("getCityDetail — structure de la réponse", () => {
 
 describe("getCityDetail — 404", () => {
   beforeEach(() => {
-    mockDb.execute = vi.fn().mockResolvedValueOnce([]);
+    mockDb.execute = vi.fn().mockResolvedValueOnce({ rows: [] });
   });
 
   it("retourne null si aucune circonscription trouvée", async () => {

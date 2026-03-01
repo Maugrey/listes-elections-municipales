@@ -51,7 +51,7 @@ export async function getListDetail(
     ORDER BY c.ordre ASC
   `);
 
-  const rowsArray = rows as Record<string, unknown>[];
+  const rowsArray = rows.rows as Record<string, unknown>[];
   if (rowsArray.length === 0) return null;
 
   const first = rowsArray[0];

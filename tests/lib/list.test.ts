@@ -72,7 +72,7 @@ describe("getListDetail — validation", () => {
 
 describe("getListDetail — structure de la réponse", () => {
   beforeEach(() => {
-    mockDb.execute = vi.fn().mockResolvedValueOnce(mockCandidats);
+    mockDb.execute = vi.fn().mockResolvedValueOnce({ rows: mockCandidats });
   });
 
   it("retourne circo et liste avec candidats", async () => {
@@ -94,7 +94,7 @@ describe("getListDetail — structure de la réponse", () => {
 
 describe("getListDetail — 404", () => {
   beforeEach(() => {
-    mockDb.execute = vi.fn().mockResolvedValueOnce([]);
+    mockDb.execute = vi.fn().mockResolvedValueOnce({ rows: [] });
   });
 
   it("retourne null si liste inexistante", async () => {

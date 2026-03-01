@@ -36,7 +36,7 @@ describe("search — validation des paramètres", () => {
 
   it("accepte une requête de 3 caractères ou plus", async () => {
     // Configure le mock pour retourner un résultat vide
-    mockDb.execute = vi.fn().mockResolvedValueOnce([]);
+    mockDb.execute = vi.fn().mockResolvedValueOnce({ rows: [] });
     mockDb.select = vi.fn().mockReturnValue({
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
@@ -53,7 +53,7 @@ describe("search — validation des paramètres", () => {
 
 describe("search — pagination par défaut", () => {
   it("retourne page=1 et limit=20 par défaut", async () => {
-    mockDb.execute = vi.fn().mockResolvedValueOnce([{ count: "0" }]);
+    mockDb.execute = vi.fn().mockResolvedValueOnce({ rows: [{ count: "0" }] });
     mockDb.select = vi.fn().mockReturnValue({
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
@@ -71,7 +71,7 @@ describe("search — pagination par défaut", () => {
 
 describe("search — structure de la réponse", () => {
   it("retourne les champs attendus (results, total, page, limit, has_more)", async () => {
-    mockDb.execute = vi.fn().mockResolvedValueOnce([{ count: "0" }]);
+    mockDb.execute = vi.fn().mockResolvedValueOnce({ rows: [{ count: "0" }] });
     mockDb.select = vi.fn().mockReturnValue({
       from: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),

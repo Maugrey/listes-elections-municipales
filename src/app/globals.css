@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Police Marianne — fallback system-ui si les fichiers woff2 ne sont pas présents */
+:root {
+  --font-marianne: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
 /* ============================================
    Variables CSS — Palette institutionnelle
    Compatible avec shadcn/ui (mode light/dark)
