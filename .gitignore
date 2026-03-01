@@ -1,1 +1,23 @@
 data/municipales-2026*.csv
+
+# Next.js
+.next/
+out/
+build/
+node_modules/
+
+# Env
+.env
+.env.local
+.env.*.local
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Misc
+.DS_Store
+*.log
